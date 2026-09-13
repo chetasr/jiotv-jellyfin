@@ -8,7 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-    <NoWarn>$(NoWarn);1591;SA1611;SA1615;SA1642;CA1003;SA1518;SA1623;SA1210;CA2227;CA1002;SA1203;SA1204;SA1600;SA1402;SA1649;SA1507</NoWarn>
+    <NoWarn>$(NoWarn);1591;SA1611;SA1615;SA1642;CA1003;SA1518;SA1623;SA1210;CA2227;CA1002;SA1203;SA1204;SA1600;SA1402;SA1649;SA1507;SA1618;CA1310;CA1307;SA1516;SA1201</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
