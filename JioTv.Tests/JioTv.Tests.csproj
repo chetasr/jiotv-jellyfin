@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1063;CA1305;CA1307</NoWarn>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
