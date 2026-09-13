@@ -23,7 +23,9 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc/>
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        serviceCollection.AddSingleton(sp =>
+        System.Console.WriteLine("### JIO-TV-SMOKE: RegisterServices invoked");
+        Console.WriteLine("### JIO-TV-SMOKE: " + applicationHost.GetType().Name);
+        serviceCollection.AddSingleton<ISecureUrlCipher>(sp =>
         {
             var appPaths = sp.GetRequiredService<IApplicationPaths>();
             var key = SecureKeyStore.LoadOrCreateKey(
@@ -59,6 +61,10 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
 
         serviceCollection.AddSingleton<IJioChannels, JioTvChannelSource>();
         serviceCollection.AddSingleton<IJioStreams, JioTvStreamSource>();
+
+        // Tuner host discovery in Jellyfin 12 is DI-driven (TunerHostManager
+        // takes IEnumerable<ITunerHost>) — explicit registration required.
+        serviceCollection.AddSingleton<MediaBrowser.Controller.LiveTv.ITunerHost, JioTvTunerHost>();
     }
 }
 

@@ -20,17 +20,20 @@ namespace JioTv.Plugin.Streaming;
 [AllowAnonymous]
 public sealed class JioTvProxyController : ControllerBase
 {
+    private readonly System.IServiceProvider _serviceProvider;
     private readonly ISecureUrlCipher _cipher;
     private readonly HlsProxyRenderer _renderer;
     private readonly IJioProxyFetcher _fetcher;
     private readonly HdneaCache _cache;
 
     public JioTvProxyController(
+        System.IServiceProvider serviceProvider,
         ISecureUrlCipher cipher,
         HlsProxyRenderer renderer,
         IJioProxyFetcher fetcher,
         HdneaCache cache)
     {
+        _serviceProvider = serviceProvider;
         _cipher = cipher;
         _renderer = renderer;
         _fetcher = fetcher;
@@ -38,6 +41,13 @@ public sealed class JioTvProxyController : ControllerBase
     }
 
     /// <summary>HLS manifest endpoint: self-heals through the renderer.</summary>
+    [HttpGet("/JioTv/whoami")]
+    public IActionResult WhoAmI()
+    {
+        var cipherType = _serviceProvider.GetService(typeof(ISecureUrlCipher))?.GetType().FullName ?? "null";
+        return Ok(new { cipher = cipherType, appHost = "v1" });
+    }
+
     [HttpGet("/JioTv/manifest.m3u8")]
     public async Task<IActionResult> Manifest(
         [FromQuery(Name = "auth")] string authParam,
