@@ -14,6 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Full runtime copy for xunit, tests exercise controller types directly -->
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.5" />
+    <PackageReference Include="Jellyfin.Model" Version="10.11.5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../JioTv.Plugin/JioTv.Plugin.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -16,46 +15,31 @@ namespace JioTv.Tests;
 /// </summary>
 public class JioTvClientTests
 {
-    private sealed class MockHandler : HttpMessageHandler
+    private static HttpResponseMessage Json(HttpStatusCode code, string body) => new(code)
     {
-        public HttpRequestMessage? LastRequest { get; private set; }
-        public Func<HttpRequestMessage, HttpResponseMessage>? Responder { get; set; }
-        public string? LastFormBody { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
-        {
-            LastRequest = request;
-            LastFormBody = request.Content is null ? null : request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
-            return Task.FromResult(Responder!(request));
-        }
-    }
-
-    private static HttpResponseMessage Json(HttpStatusCode code, string body)
-    {
-        return new HttpResponseMessage(code)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-    }
+        Content = new StringContent(body, Encoding.UTF8, "application/json"),
+    };
 
     [Fact]
     public async Task LiveAsync_SendsExpectedHeadersAndForm()
     {
-        var handler = new MockHandler
+        var handler = new PlaybackMockHandler
         {
-            Responder = _ => Json(HttpStatusCode.OK,
+            Respond = _ => Json(HttpStatusCode.OK,
                 "{\"code\":200,\"result\":\"https://jiotv.cdn/full.m3u8?__hdnea__=exp%3D1~hmac%3Dabc\",\"bitrates\":{\"auto\":\"\"}}"),
         };
         var client = JioTvTestFactory.Create(handler, access: "at", crm: "crm1", unique: "u1", deviceId: "dev1");
 
         var result = await client.LiveAsync("144");
 
-        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.EndsWith("/playback/apis/v1.1/geturl?langId=6", handler.LastRequest.RequestUri!.ToString());
-        Assert.Equal("at", handler.LastRequest.Headers.GetValues("accessToken").First());
-        Assert.Equal("crm1", handler.LastRequest.Headers.GetValues("crmid").First());
+        var request = handler.SentRequests.Single();
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.EndsWith("/playback/apis/v1.1/geturl?langId=6", request.RequestUri!.ToString());
+        Assert.Equal("at", request.Headers.GetValues("accessToken").First());
+        Assert.Equal("crm1", request.Headers.GetValues("crmid").First());
 
         var form = handler.LastFormBody;
+        Assert.NotNull(form);
         Assert.Contains("channel_id=144", form);
         Assert.Contains("stream_type=Seek", form);
         Assert.True(result!.Code == 200);
@@ -72,7 +56,7 @@ public class JioTvClientTests
     }
 
     [Fact]
-    public void ExtractHdnea_MissingTokenReturnsNull()
+    public void ExtractHdnea_MissingTokenReturnsEmpty()
     {
         Assert.False(JioTvClient.TryExtractHdneaFromUrl("https://edge/stream.m3u8", out var token));
         Assert.Equal(string.Empty, token);
@@ -81,10 +65,8 @@ public class JioTvClientTests
     [Fact]
     public void SelectQuality_ProvidersFallbackOrder()
     {
-        // Explicit quality match
         Assert.Equal("hi.m3u8", JioTvClient.SelectQuality("high",
             auto: "auto.m3u8", high: "hi.m3u8", medium: "med.m3u8", low: "lo.m3u8"));
-        // Unknown quality -> auto first
         Assert.Equal("auto.m3u8", JioTvClient.SelectQuality("sparkle",
             auto: "auto.m3u8", high: "hi.m3u8", medium: "med.m3u8", low: "lo.m3u8"));
     }
@@ -92,9 +74,9 @@ public class JioTvClientTests
     [Fact]
     public void LiveAsync_Non200_Throws()
     {
-        var handler = new MockHandler
+        var handler = new PlaybackMockHandler
         {
-            Responder = _ => Json(HttpStatusCode.OK, "{\"code\":401,\"message\":\"token expired\"}"),
+            Respond = _ => Json(HttpStatusCode.OK, "{\"code\":401,\"message\":\"token expired\"}"),
         };
         var client = JioTvTestFactory.Create(handler);
         var ex = Assert.Throws<ExternalApiException>(() => client.LiveAsync("144").GetAwaiter().GetResult());
@@ -104,9 +86,9 @@ public class JioTvClientTests
     [Fact]
     public async Task GetChannels_ParsesChannelList()
     {
-        var handler = new MockHandler
+        var handler = new PlaybackMockHandler
         {
-            Responder = _ => Json(HttpStatusCode.OK, """
+            Respond = _ => Json(HttpStatusCode.OK, """
             {"code":200,"result":[
               {"channel_id":144,"channel_name":"NDTV","logoUrl":"https://logo/144.png","channelCategoryId":1,"channelLanguageId":1,"isHD":true,"isCatchupAvailable":false,"business_type":"free"},
               {"channel_id":"467","channel_name":"Sports1","business_type":"premium"}
