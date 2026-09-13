@@ -58,6 +58,7 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
 
         serviceCollection.AddSingleton<HlsProxyRenderer>();
         serviceCollection.AddTransient<JioTvProxyController>();
+        serviceCollection.AddTransient<Configuration.JioTvAuthController>();
 
         serviceCollection.AddSingleton<IJioChannels, JioTvChannelSource>();
         serviceCollection.AddSingleton<IJioStreams, JioTvStreamSource>();

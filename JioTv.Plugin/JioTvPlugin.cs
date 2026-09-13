@@ -38,6 +38,13 @@ public class JioTvPlugin : BasePlugin<Configuration.PluginConfiguration>, IHasWe
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()
     {
-        return []; // Config page registered in Task 10
+        return
+        [
+            new PluginPageInfo
+            {
+                Name = Name,
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
+            },
+        ];
     }
 }
