@@ -28,9 +28,21 @@ You won't need to log in again after each restart — the plugin persists its cr
 
 ### Installation
 
-1. Grab the plugin DLL (`JioTv.Plugin.dll` + supporting `.deps.json`) from a GitHub release **or** `dotnet build` this repo.
-2. Copy the output files into Jellyfin's plugin directory:
-    - Docker: into the mounted path you exposed as `/config/plugins/JioTv/`
+#### Option A — via Jellyfin plugin repository URL (recommended)
+
+1. In Jellyfin: **Dashboard → Plugins → Repositories → Add**.
+2. Paste the manifest URL:
+
+    ```
+    https://raw.githubusercontent.com/chetasr/jiotv-jellyfin/main/manifest.json
+    ```
+3. Back on **Catalog** you'll see **JioTV** under *Live TV* → **Install**. Restart Jellyfin.
+
+#### Option B — manual zip (from a GitHub release)
+
+1. Download `JioTv.Plugin.<ver>.zip` from [Releases](https://github.com/chetasr/jiotv-jellyfin/releases).
+2. Extract into Jellyfin's plugin directory:
+    - Docker: the mounted path you exposed as `/config/plugins/JioTv/`
     - Bare metal: `~/.local/share/jellyfin/plugins/JioTv/`
 3. Restart Jellyfin.
 

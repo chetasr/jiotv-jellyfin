@@ -28,7 +28,7 @@ cat > "$ROOT_DIR/artifacts/meta.json" <<EOF
   "guid": "7d4abbd2-2e55-4a8c-9e6a-2afc4fc3a3e9",
   "name": "JioTV",
   "version": "$VERSION",
-  "targetAbi": "10.9.1.0",
+  "targetAbi": "10.11.5.0",
   "timestamp": "$(date -u +%FT%TZ)",
   "description": "JioTV live tuner for Jellyfin: log in with your Jio account, browse 1100+ live channels in Live TV with EPG driven by Jio's own data.",
   "category": "Live TV",
