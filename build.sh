@@ -34,7 +34,7 @@ cat > "$ROOT_DIR/artifacts/meta.json" <<EOF
   "category": "Live TV",
   "owner": "JioTV Jellyfin",
   "changelog": "Auto-refresh tokens, self-healing proxy, AES-secured auth URLs, EPG via Jio.",
-  "imageUrl": "https://raw.githubusercontent.com/mitthu786/TS-JioTV/master/app/assets/css/img/logo.png"
+  "imageUrl": "https://raw.githubusercontent.com/chetasr/jiotv-jellyfin/main/assets/logo.png"
 }
 EOF
 
