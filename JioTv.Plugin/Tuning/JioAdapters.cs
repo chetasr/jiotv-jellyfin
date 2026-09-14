@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using JioTv.Plugin.Auth;
 using JioTv.Plugin.Network;
+using Microsoft.AspNetCore.Http;
 using JioTv.Plugin.Streaming;
 using MediaBrowser.Model.Dto;
 
@@ -29,7 +31,15 @@ public sealed class JioTvChannelSource : IJioChannels
     public async Task<List<Channel>> GetChannelsAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await _auth.EnsureFreshTokensAsync().ConfigureAwait(false);
+        try
+        {
+            await _auth.EnsureFreshTokensAsync().ConfigureAwait(false);
+        }
+        catch (InvalidOperationException)
+        {
+            // No credentials stored: channel listing works without them, and a
+            // failed auth check must not break tuner enumeration or the guide.
+        }
         return await _client.GetChannelsAsync().ConfigureAwait(false);
     }
 }
@@ -43,11 +53,15 @@ public sealed class JioTvStreamSource : IJioStreams
 {
     private readonly JioTvClient _client;
     private readonly ManifestRewriter _rewriter;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+    private readonly MediaBrowser.Controller.IServerApplicationHost? _appHost;
 
-    public JioTvStreamSource(JioTvClient client, ManifestRewriter rewriter)
+    public JioTvStreamSource(JioTvClient client, ManifestRewriter rewriter, IHttpContextAccessor? httpContextAccessor = null, MediaBrowser.Controller.IServerApplicationHost? appHost = null)
     {
         _client = client;
         _rewriter = rewriter;
+        _httpContextAccessor = httpContextAccessor;
+        _appHost = appHost;
     }
 
     /// <inheritdoc/>
@@ -63,15 +77,19 @@ public sealed class JioTvStreamSource : IJioStreams
 
         var authPath = _rewriter.CreateEncryptedProxyPath(
             string.Empty, upstreamUrl, string.Empty, channelId, "/JioTv/manifest.m3u8", "auto");
+        var absolutePath = MakeAbsolute(authPath);
         return new MediaSourceInfo
         {
-            Path = authPath,
+            Path = absolutePath,
             Protocol = MediaBrowser.Model.MediaInfo.MediaProtocol.Http,
             Container = "hls",
             // Port of M3U tuner's CreateMediaSourceInfo pattern: Jellyfin's
             // standard playback flow expects RequiresOpening so it routes
             // through ILiveStream.Open (our tuner's GetChannelStream) and
             // assigns an OpenToken — the same lifecycle m3u/HDHomeRun use.
+            // The Path MUST be absolute: Jellyfin probes/plays HTTP sources
+            // by fetching Path verbatim, and relative paths fail (10.11.
+            // MediaSourceManager: "Error probing live tv stream").
             RequiresOpening = true,
             RequiresClosing = true,
             IsInfiniteStream = true,
@@ -80,5 +98,35 @@ public sealed class JioTvStreamSource : IJioStreams
             SupportsTranscoding = false,
             IsRemote = false,
         };
+    }
+
+    /// <summary>
+    /// Makes the relative proxy path absolute so players and Jellyfin's own
+    /// MediaSourceManager can fetch it. The LiveStream-Open path runs inside
+    /// the HTTP request pipeline, so the request context gives us the
+    /// client-visible address (scheme://host[:port] honouring reverse proxies
+    /// and https); fallback is the smart bind address.
+    /// </summary>
+    private string MakeAbsolute(string relativePath)
+    {
+        var host = _httpContextAccessor is null ? null : _httpContextAccessor.HttpContext;
+        if (host?.Request.Host.Value is { Length: > 0 } hostname)
+        {
+            return string.Concat(host.Request.Scheme, "://", hostname, relativePath);
+        }
+
+        if (_appHost is null)
+        {
+            // Test/edge path: keep relative (same as pre-0.1.4 behaviour).
+            return relativePath;
+        }
+
+        var remoteIp = host?.Connection.RemoteIpAddress;
+        if (remoteIp is not null)
+        {
+            return _appHost.GetSmartApiUrl(remoteIp) + relativePath;
+        }
+
+        return _appHost.GetSmartApiUrl(IPAddress.Loopback) + relativePath;
     }
 }

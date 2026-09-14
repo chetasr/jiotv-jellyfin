@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using JioTv.Plugin.Network;
 
@@ -28,7 +29,9 @@ public static class JioTvChannelMapper
             };
             if (!string.IsNullOrEmpty(channel.LogoUrl))
             {
-                info.ImagePath = channel.LogoUrl;
+                info.ImagePath = channel.LogoUrl.Contains('/', StringComparison.Ordinal) && channel.LogoUrl.Contains(':', StringComparison.Ordinal)
+                    ? channel.LogoUrl
+                    : string.Concat(Network.JioConstants.LogoBaseUrl, channel.LogoUrl);
             }
 
             result.Add(info);

@@ -139,8 +139,15 @@ public class JioTvClient
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 
-    private readonly JioCredentials _creds;
+    private readonly JioCredentials? _snapshot;
+    private readonly CredentialStore? _store;
     private readonly Func<HttpClient> _clientFactory;
+
+    /// <summary>Credentials snapshot resolved per call; the auth module can
+    /// replace tokens after the client was constructed (e.g. OTP login after
+    /// plugin load), so the snapshot must never be cached in the field.</summary>
+    private JioCredentials _creds => _store?.Load() ?? _snapshot
+        ?? new JioCredentials();
 
     /// <summary>Maximum number of channels we accept before flagging suspicious responses.</summary>
     private const int MaxPlausibleChannels = 2000;
@@ -148,7 +155,14 @@ public class JioTvClient
     /// <summary>Creates a client tied to the given credentials snapshot.</summary>
     public JioTvClient(JioCredentials creds, Func<HttpClient>? clientFactory = null)
     {
-        _creds = creds;
+        _snapshot = creds;
+        _clientFactory = clientFactory ?? (() => JioHttp.HttpClient);
+    }
+
+    /// <summary>Creates a client that re-reads credentials from the store on every call.</summary>
+    public JioTvClient(CredentialStore? store, Func<HttpClient>? clientFactory = null)
+    {
+        _store = store;
         _clientFactory = clientFactory ?? (() => JioHttp.HttpClient);
     }
 

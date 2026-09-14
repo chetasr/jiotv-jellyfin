@@ -58,7 +58,47 @@ public sealed class JioAuth : IDisposable
             return true;
         }
 
-        throw CreateExternalError($"OTP send failed with status {(int)response.StatusCode}");
+        throw CreateExternalError(await DescribeJioErrorAsync(response, "OTP send").ConfigureAwait(false));
+    }
+
+    /// <summary>Builds a diagnostic message from Jio's error body (code + human message).</summary>
+    private static async Task<string> DescribeJioErrorAsync(HttpResponseMessage response, string operation)
+    {
+        var detail = string.Empty;
+        try
+        {
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    var root = doc.RootElement;
+                    var message = root.TryGetProperty("message", out var m) ? m.GetString() : null;
+                    if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        detail = message.Replace("\n", " ").Trim();
+                    }
+
+                    if (root.TryGetProperty("code", out var c) && c.TryGetInt32(out var code))
+                    {
+                        detail = $"Jio error {code}: {detail}";
+                    }
+                }
+                catch (JsonException)
+                {
+                    detail = body.Length <= 200 ? body.Trim() : string.Empty;
+                }
+            }
+        }
+        catch
+        {
+            // non-JSON or unreadable body: fall back to the generic message below
+        }
+
+        return string.IsNullOrWhiteSpace(detail)
+            ? $"{operation} failed with status {(int)response.StatusCode}"
+            : $"{operation} failed: {detail}";
     }
 
     /// <summary>
@@ -202,10 +242,9 @@ public sealed class JioAuth : IDisposable
                 {
                     await RefreshSsoTokenAsync().ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch
                 {
                     // SSO refresh failing is logged but non-fatal; next fetch retries.
-                    System.Console.WriteLine("### JIO-AUTH: SSO refresh failed: " + ex.Message);
                 }
             }
         }

@@ -68,6 +68,10 @@ public sealed class JioTvAuthController : ControllerBase
             await _auth.SendOtpAsync(mobileNumber).ConfigureAwait(false);
             return Ok(new { status = "success" });
         }
+        catch (ExternalApiException ex)
+        {
+            return Ok(new { status = "failed", message = ex.Message });
+        }
         catch (Exception)
         {
             return Ok(new { status = "failed", message = "OTP send failed; check server logs" });

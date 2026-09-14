@@ -21,6 +21,10 @@ public static class JioConstants
     public const string RefreshSsoTokenUrl = "https://tv.media.jio.com/apis/v2.0/loginotp/refresh?langId=6";
 
     // --- Channel listing URLs (urls.go) ---
+
+    /// <summary>Base for Jio channel/show poster URLs (bare filename references).</summary>
+    public const string LogoBaseUrl = "https://jiotv.catchup.cdn.jio.com/dare_images/images/";
+
     public const string ChannelsApiUrl = "https://jiotvapi.cdn.jio.com/apis/v3.1/getMobileChannelList/get/?langId=6&os=android&devicetype=phone&usertype=JIO&version=315&langId=6";
 
     // --- EPG URLs (urls.go) ---

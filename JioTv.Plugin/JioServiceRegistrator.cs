@@ -23,8 +23,6 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc/>
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        System.Console.WriteLine("### JIO-TV-SMOKE: RegisterServices invoked");
-        Console.WriteLine("### JIO-TV-SMOKE: " + applicationHost.GetType().Name);
         serviceCollection.AddSingleton<ISecureUrlCipher>(sp =>
         {
             var appPaths = sp.GetRequiredService<IApplicationPaths>();
@@ -54,7 +52,7 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
         // Request-time client bound to credentials snapshot at construction;
         // the stream/channel sources reload credentials per call in v2.
         serviceCollection.AddSingleton<JioTvClient>(sp => new JioTvClient(
-            sp.GetRequiredService<CredentialStore>().Load() ?? new JioCredentials()));
+            sp.GetRequiredService<CredentialStore>()));
 
         serviceCollection.AddSingleton<IUpstream>(sp => new JioUpstreamAdapter(
             sp.GetRequiredService<IJioProxyFetcher>(),
@@ -81,6 +79,8 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
 
         serviceCollection.AddSingleton<IJioChannels, JioTvChannelSource>();
         serviceCollection.AddSingleton<IJioStreams, JioTvStreamSource>();
+        serviceCollection.AddHttpContextAccessor();
+        serviceCollection.AddSingleton<IServerApplicationHost>(applicationHost);
 
         // Listings provider (EPG). Registered with Jellyfin's ListingsManager
         // via DI; the tuner's channels auto-match by type "jiotv".
