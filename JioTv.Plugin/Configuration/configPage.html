@@ -21,15 +21,15 @@
 
                 <div id="login-ui">
                     <div class="selectContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="mobile">Jio mobile number</label>
-                        <input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit Jio number" is="emby-input" class="emby-input" />
+                        <label class="inputLabel inputLabelUnfocused" for="jiotvMobile">Jio mobile number</label>
+                        <input id="jiotvMobile" inputmode="numeric" maxlength="10" placeholder="10-digit Jio number" is="emby-input" class="emby-input" />
                         <div class="fieldDescription">The number you use inside the JioTV app.</div>
                     </div>
                     <button id="send-otp" is="emby-button" type="button" class="raised button-submit block emby-button"><span>Send OTP</span></button>
                     <div id="otp-ui" class="jiotv-hidden">
                         <div class="selectContainer">
-                            <label class="inputLabel inputLabelUnfocused" for="otp">OTP received on SMS</label>
-                            <input id="otp" inputmode="numeric" maxlength="6" is="emby-input" class="emby-input" />
+                            <label class="inputLabel inputLabelUnfocused" for="jiotvOtp">OTP received on SMS</label>
+                            <input id="jiotvOtp" inputmode="numeric" maxlength="6" is="emby-input" class="emby-input" />
                         </div>
                         <button id="verify-otp" is="emby-button" type="button" class="raised button-submit block emby-button"><span>Verify &amp; log in</span></button>
                     </div>
@@ -63,7 +63,7 @@
             function post(path, data) { return fetchJson(path, 'POST', new URLSearchParams(data).toString()); }
 
             document.querySelector('#JioTvConfigPage').addEventListener('pageshow', function () {
-                var mobileInput = g('mobile'), otpInput = g('otp');
+                var mobileInput = g('jiotvMobile'), otpInput = g('jiotvOtp');
                 var sendBtn = g('send-otp'), verifyBtn = g('verify-otp'), logoutBtn = g('logout');
                 var msg = g('JioTvMsg'), loginUi = g('login-ui'), statusUi = g('status-ui'), otpUi = g('otp-ui');
                 var storedMobile = null;
