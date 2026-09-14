@@ -78,7 +78,7 @@ public sealed class JioTvStreamSource : IJioStreams
         var authPath = _rewriter.CreateEncryptedProxyPath(
             string.Empty, upstreamUrl, string.Empty, channelId, "/JioTv/manifest.m3u8", "auto");
         var absolutePath = MakeAbsolute(authPath);
-        return new MediaSourceInfo
+        var mediaSource = new MediaSourceInfo
         {
             Path = absolutePath,
             Protocol = MediaBrowser.Model.MediaInfo.MediaProtocol.Http,
@@ -102,7 +102,31 @@ public sealed class JioTvStreamSource : IJioStreams
             SupportsProbing = false,
             IsRemote = false,
         };
+        mediaSource.MediaStreams = [VideoStream(), AudioStream()];
+        return mediaSource;
     }
+
+    /// <summary>Static stream descriptors for Broadpeak-packaged Jio HLS
+    /// (always h.264 + AAC at all qualities). Telling the player the codecs
+    /// up-front lets direct-play win without any ffprobe round trip.</summary>
+    private static MediaBrowser.Model.Entities.MediaStream VideoStream() => new()
+    {
+        Type = MediaBrowser.Model.Entities.MediaStreamType.Video,
+        Codec = "h264",
+        Index = -1,
+        IsInterlaced = true,
+        RealFrameRate = 25,
+        BitRate = 2_000_000,
+    };
+
+    private static MediaBrowser.Model.Entities.MediaStream AudioStream() => new()
+    {
+        Type = MediaBrowser.Model.Entities.MediaStreamType.Audio,
+        Codec = "aac",
+        Index = -1,
+        Channels = 2,
+        SampleRate = 48_000,
+    };
 
     /// <summary>
     /// Makes the relative proxy path absolute so players and Jellyfin's own
