@@ -43,13 +43,16 @@ public class JioTvTunerHost : ITunerHost
     /// <summary>Enumerates channels (channel_id, name, logo, numeric ordering).</summary>
     public async Task<List<ChannelInfo>> GetChannels(bool enableCache, CancellationToken cancellationToken)
     {
+        System.Console.WriteLine("### JIO-TUNER: GetChannels called, enableCache=" + enableCache);
         var channels = await _channelSource.GetChannelsAsync(cancellationToken).ConfigureAwait(false);
+        System.Console.WriteLine("### JIO-TUNER: upstream channel count=" + channels.Count);
         return JioTvChannelMapper.Map(channels, TunerId).ToList();
     }
 
     /// <summary>Opens a live stream for the channel, resolving a fresh manifest URL.</summary>
     public async Task<ILiveStream> GetChannelStream(string channelId, string streamId, IList<ILiveStream> currentLiveStreams, CancellationToken cancellationToken)
     {
+        System.Console.WriteLine("### JIO-TUNER: GetChannelStream(" + channelId + "," + streamId + ")");
         var mediaSource = await _streamSource.OpenLiveStreamAsync(channelId, cancellationToken).ConfigureAwait(false);
         return new JioTvLiveStream(mediaSource);
     }
@@ -57,6 +60,7 @@ public class JioTvTunerHost : ITunerHost
     /// <summary>Jellyfin calls this to decide what a channel can offer; v1 offers one HLS source.</summary>
     public async Task<List<MediaSourceInfo>> GetChannelStreamMediaSources(string channelId, CancellationToken cancellationToken)
     {
+        System.Console.WriteLine("### JIO-TUNER: GetChannelStreamMediaSources(" + channelId + ")");
         var mediaSource = await _streamSource.OpenLiveStreamAsync(channelId, cancellationToken).ConfigureAwait(false);
         return [mediaSource];
     }

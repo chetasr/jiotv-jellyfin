@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using JioTv.Plugin.Network;
@@ -45,7 +46,9 @@ public sealed class JioTvProxyController : ControllerBase
     public IActionResult WhoAmI()
     {
         var cipherType = _serviceProvider.GetService(typeof(ISecureUrlCipher))?.GetType().FullName ?? "null";
-        return Ok(new { cipher = cipherType, appHost = "v1" });
+        var tuners = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetServices<MediaBrowser.Controller.LiveTv.ITunerHost>(_serviceProvider)
+            .Select(t => t.GetType().FullName).ToList();
+        return Ok(new { cipher = cipherType, appHost = "v1", tuners });
     }
 
     [HttpGet("/JioTv/manifest.m3u8")]
