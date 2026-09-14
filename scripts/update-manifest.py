@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Update root manifest.json with a new plugin release entry.
+NOTE: Jellyfin 12 compares manifest checksums as MD5 (not sha256).
 
 Usage: update-manifest.py <version> <zipUrl> <sha256zip> [baseUrl]
 Reads artifacts/meta.json for guid/name/description/category, merges into the

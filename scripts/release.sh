@@ -19,7 +19,7 @@ echo "Building $VERSION"
 
 ZIP_FILE=$(ls "$ROOT_DIR"/artifacts/*.zip | head -1)
 ZIP_BASE=$(basename "$ZIP_FILE")
-CHECKSUM=$(sha256sum "$ZIP_FILE" | awk '{print $1}')
+CHECKSUM=$(md5sum "$ZIP_FILE" | awk '{print $1}')
 ZIP_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ZIP_BASE}"
 
 echo "Updating manifest.json with $ZIP_URL (sha256 $CHECKSUM)"
