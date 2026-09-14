@@ -96,6 +96,10 @@ public sealed class JioTvStreamSource : IJioStreams
             SupportsDirectPlay = true,
             SupportsDirectStream = true,
             SupportsTranscoding = false,
+            // HLS proxy: Jellyfin's ffprobe of our own URL can be unreachable
+            // inside containers (mapped-port mismatch) and adds nothing for
+            // our self-describing manifest — skip probing entirely.
+            SupportsProbing = false,
             IsRemote = false,
         };
     }
