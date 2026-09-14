@@ -6,7 +6,7 @@
         "overview": "JioTV live tuner for Jellyfin: log in with your Jio account, browse 1100+ live channels in Live TV with EPG driven by Jio's own data.",
         "owner": "JioTV Jellyfin",
         "category": "Live TV",
-        "imageUrl": "https://raw.githubusercontent.com/mitthu786/TS-JioTV/master/app/assets/css/img/logo.png",
+        "imageUrl": "https://raw.githubusercontent.com/chetasr/jiotv-jellyfin/main/assets/logo.png",
         "versions": [
             {
                 "version": "0.1.1",

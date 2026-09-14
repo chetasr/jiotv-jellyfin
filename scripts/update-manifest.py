@@ -43,10 +43,11 @@ def main() -> None:
     manifest = load_json(MANIFEST, [])
     repo_base = base_url or f"https://github.com/chetasr/{ROOT.name}"
 
+
     guid = meta.get("guid", "")
     existing = next((pkg for pkg in manifest if pkg.get("guid") == guid), None)
-    if existing is None:
-        pkg = {
+    def build_package():
+        return {
             "guid": guid,
             "name": meta.get("name", "JioTV"),
             "description": meta.get("description", ""),
@@ -56,8 +57,18 @@ def main() -> None:
             "imageUrl": meta.get("imageUrl", ""),
             "versions": [version_info],
         }
+    if existing is None:
+        pkg = build_package()
         manifest.append(pkg)
     else:
+        # refresh top-level metadata too (imageUrl etc. follow meta.json)
+        fresh = build_package()
+        existing["description"] = fresh["description"]
+        existing["overview"] = fresh["overview"]
+        existing["owner"] = fresh["owner"]
+        existing["category"] = fresh["category"]
+        if fresh.get("imageUrl"):
+            existing["imageUrl"] = fresh["imageUrl"]
         existing.setdefault("versions", [])
         existing["versions"] = [
             v for v in existing["versions"]
