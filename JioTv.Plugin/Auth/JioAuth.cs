@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -194,6 +195,19 @@ public sealed class JioAuth : IDisposable
             {
                 await RefreshAccessTokenAsync().ConfigureAwait(false);
             }
+
+            if (TokenValidity.ShouldRefreshSsoToken(creds.SSOToken, creds.LastSSOTokenRefreshTime, now))
+            {
+                try
+                {
+                    await RefreshSsoTokenAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // SSO refresh failing is logged but non-fatal; next fetch retries.
+                    System.Console.WriteLine("### JIO-AUTH: SSO refresh failed: " + ex.Message);
+                }
+            }
         }
         finally
         {
@@ -206,6 +220,70 @@ public sealed class JioAuth : IDisposable
     {
         _refreshMutex.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Refreshes the SSO token using the refresh-sso endpoint. Port of
+    /// JioTV Go's LoginRefreshSSOToken.
+    /// </summary>
+    public async Task<bool> RefreshSsoTokenAsync()
+    {
+        var creds = _store.Load();
+        if (creds is null)
+        {
+            throw new InvalidOperationException("No credentials stored; cannot refresh SSO token");
+        }
+
+        if (string.IsNullOrEmpty(creds.SSOToken))
+        {
+            throw new InvalidOperationException("SSOToken is empty, cannot refresh");
+        }
+
+        if (string.IsNullOrEmpty(creds.UniqueId))
+        {
+            throw new InvalidOperationException("UniqueID is empty, cannot refresh SSO token");
+        }
+
+        var deviceId = EnsureDeviceId(_store);
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            throw new InvalidOperationException("DeviceId is empty, cannot refresh SSO token");
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, JioConstants.RefreshSsoTokenUrl);
+        request.Version = new Version(1, 1);
+        request.Headers.TryAddWithoutValidation("devicetype", JioConstants.DeviceTypePhone);
+        request.Headers.TryAddWithoutValidation("versionCode", JioConstants.VersionCode);
+        request.Headers.TryAddWithoutValidation("os", JioConstants.OsAndroid);
+        request.Headers.TryAddWithoutValidation("Host", JioConstants.TvMediaDomain);
+        request.Headers.TryAddWithoutValidation("User-Agent", JioConstants.UserAgentOkHttp);
+        request.Headers.TryAddWithoutValidation("ssoToken", creds.SSOToken);
+        request.Headers.TryAddWithoutValidation("uniqueid", creds.UniqueId);
+        request.Headers.TryAddWithoutValidation("deviceid", deviceId);
+
+        using var response = await JioHttp.HttpClient.SendAsync(request).ConfigureAwait(false);
+        if ((int)response.StatusCode != 200)
+        {
+            return false;
+        }
+
+        var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var parsed = System.Text.Json.JsonSerializer.Deserialize<SsoRefreshResponse>(body);
+        if (string.IsNullOrEmpty(parsed?.SSOToken))
+        {
+            return false;
+        }
+
+        creds.SSOToken = parsed.SSOToken;
+        creds.LastSSOTokenRefreshTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _store.Save(creds);
+        return true;
+    }
+
+    private sealed class SsoRefreshResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("ssoToken")]
+        public string? SSOToken { get; set; }
     }
 
     private static string ToBase64(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
