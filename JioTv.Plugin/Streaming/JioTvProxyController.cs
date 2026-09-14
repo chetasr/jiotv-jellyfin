@@ -55,7 +55,7 @@ public sealed class JioTvProxyController : ControllerBase
     public async Task<IActionResult> Manifest(
         [FromQuery(Name = "auth")] string authParam,
         [FromQuery(Name = "channel_key_id")] string channelId,
-        [FromQuery(Name = "q")] string quality)
+        [FromQuery(Name = "q")] string? quality)
     {
         var upstreamUrl = _cipher.Decrypt(WebUtility.UrlDecode(authParam));
         var outcome = await _renderer.RenderManifestAsync(channelId ?? string.Empty, upstreamUrl, quality ?? "auto").ConfigureAwait(false);
@@ -70,18 +70,30 @@ public sealed class JioTvProxyController : ControllerBase
     public async Task<IActionResult> Segment(
         [FromQuery(Name = "auth")] string authParam,
         [FromQuery(Name = "channel_key_id")] string channelId,
-        [FromQuery(Name = "q")] string quality)
+        [FromQuery(Name = "q")] string? quality)
     {
         var upstreamUrl = _cipher.Decrypt(WebUtility.UrlDecode(authParam));
         var key = HdneaCache.CacheKey(channelId ?? string.Empty, upstreamUrl);
 
-        if (!_cache.TryGet(key, out var token))
+        string token;
+        if (!_cache.TryGet(key, out var cachedToken))
         {
             _ = JioTvClient.TryExtractHdneaFromUrl(upstreamUrl, out var urlToken);
-            token = urlToken;
+            token = urlToken ?? string.Empty;
+        }
+        else
+        {
+            token = cachedToken!;
         }
 
-        var (status, body, newHdnea) = await _fetcher.FetchAsync(upstreamUrl, token).ConfigureAwait(false);
+        System.Console.WriteLine("### JIO-SEG-URL: " + upstreamUrl);
+        System.Console.WriteLine("### JIO-SEG-TOKEN: " + (token ?? "null"));
+        var isKey = upstreamUrl.EndsWith(".pkey", StringComparison.OrdinalIgnoreCase) || upstreamUrl.EndsWith(".key", StringComparison.OrdinalIgnoreCase);
+        var cookie = isKey
+            ? CookieHelpers.BuildKeyCookies(upstreamUrl)
+            : (string.IsNullOrEmpty(token) ? null : "__hdnea__=" + token);
+        var (status, body, newHdnea) = await _fetcher.FetchAsync(upstreamUrl, channelId ?? string.Empty, cookie ?? string.Empty, isKey).ConfigureAwait(false);
+        System.Console.WriteLine("### JIO-SEG: status=" + status + " bytes=" + body.Length);
         if (!string.IsNullOrEmpty(newHdnea))
         {
             _cache.Set(key, newHdnea);
