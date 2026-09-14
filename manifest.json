@@ -1,0 +1,23 @@
+[
+    {
+        "guid": "7d4abbd2-2e55-4a8c-9e6a-2afc4fc3a3e9",
+        "name": "JioTV",
+        "description": "JioTV live tuner for Jellyfin: log in with your Jio account, browse 1100+ live channels in Live TV with EPG driven by Jio's own data.",
+        "overview": "JioTV live tuner for Jellyfin: log in with your Jio account, browse 1100+ live channels in Live TV with EPG driven by Jio's own data.",
+        "owner": "JioTV Jellyfin",
+        "category": "Live TV",
+        "imageUrl": "https://raw.githubusercontent.com/mitthu786/TS-JioTV/master/app/assets/css/img/logo.png",
+        "versions": [
+            {
+                "version": "0.1.0",
+                "changelog": "Auto-refresh tokens, self-healing proxy, AES-secured auth URLs, EPG via Jio.",
+                "targetAbi": "10.11.5.0",
+                "sourceUrl": "https://github.com/chetasr/jiotv-jellyfin/releases/download/v0.1.0/JioTv.Plugin.0.1.0.zip",
+                "checksum": "aec754370fd7a6580b313ce6d6a1f850d782f146d96196584afb03ecc7313689",
+                "timestamp": "2026-09-14T11:13:07Z",
+                "repositoryName": "JioTV",
+                "repositoryUrl": "https://github.com/chetasr/jiotv-jellyfin"
+            }
+        ]
+    }
+]
