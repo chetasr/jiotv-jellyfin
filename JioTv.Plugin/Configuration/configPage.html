@@ -1,123 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>JioTV Plugin</title>
-<style>
-  body { font-family: system-ui, sans-serif; background:#1a1f2e; color:#eee; margin:0; padding:1rem; }
-  .card { max-width: 460px; margin: 2rem auto; background:#22283a; border-radius:12px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,.4); }
-  h2 { margin-top:0; }
-  label { display:block; margin:.8rem 0 .2rem; font-size:.85rem; color:#9aa3b8; }
-  input { width:100%; box-sizing:border-box; padding:.55rem; border-radius:8px; border:1px solid #3a4258; background:#181d2c; color:#eee; font-size:1rem; }
-  button { margin-top:1rem; padding:.6rem 1.2rem; border-radius:8px; border:0; background:#7b2ea8; color:#fff; font-size:.95rem; cursor:pointer; }
-  button.secondary { background:#3a4258; }
-  button:disabled { opacity:.5; cursor:default; }
-  .meta { margin-top:1rem; font-size:.82rem; color:#9aa3b8; line-height:1.6; }
-  .hidden { display:none; }
-  #msg { margin-top:.8rem; font-size:.85rem; min-height:1.2em; }
-</style>
+    <meta charset="utf-8">
+    <title>JioTV</title>
 </head>
 <body>
-<div data-role="page" id="jiotvConfigPage" class="page type-interior pluginConfigurationPage" data-title="JioTV">
-<div class="card">
-  <h2>📺 JioTV</h2>
+    <div id="JioTvConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
+        <style>
+    .jiotv-card { max-width: 460px; margin: 1.5rem auto; background:#22283a; border-radius:12px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,.4); }
+    .jiotv-card label { display:block; margin:.8rem 0 .2rem; font-size:.85rem; color:#9aa3b8; }
+    .jiotv-card input { width:100%; box-sizing:border-box; padding:.55rem; border-radius:8px; border:1px solid #3a4258; background:#181d2c; color:#eee; font-size:1rem; }
+    .jiotv-card button { margin-top:1rem; padding:.6rem 1.2rem; border-radius:8px; border:0; }
+    .jiotv-hidden { display:none !important; }
+    .jiotv-meta { font-size:.82rem; color:#9aa3b8; line-height:1.6; }
+    #JioTvMsg { margin-top:.8rem; font-size:.85rem; min-height:1.2em; }
+        </style>
+        <div data-role="content">
+            <div class="content-primary jiotv-card">
+                <h2>📺 JioTV</h2>
 
-  <div id="login-ui">
-    <label for="mobile">Jio mobile number</label>
-    <input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit Jio number" />
-    <button id="send-otp">Send OTP</button>
-    <div id="otp-ui" class="hidden">
-      <label for="otp">OTP received on SMS</label>
-      <input id="otp" inputmode="numeric" maxlength="6" />
-      <button id="verify-otp">Verify &amp; log in</button>
+                <div id="login-ui">
+                    <div class="selectContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="mobile">Jio mobile number</label>
+                        <input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit Jio number" is="emby-input" class="emby-input" />
+                        <div class="fieldDescription">The number you use inside the JioTV app.</div>
+                    </div>
+                    <button id="send-otp" is="emby-button" type="button" class="raised button-submit block emby-button"><span>Send OTP</span></button>
+                    <div id="otp-ui" class="jiotv-hidden">
+                        <div class="selectContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="otp">OTP received on SMS</label>
+                            <input id="otp" inputmode="numeric" maxlength="6" is="emby-input" class="emby-input" />
+                        </div>
+                        <button id="verify-otp" is="emby-button" type="button" class="raised button-submit block emby-button"><span>Verify &amp; log in</span></button>
+                    </div>
+                </div>
+
+                <div id="status-ui" class="jiotv-hidden">
+                    <div class="jiotv-meta">
+                        <div>👤 <span id="acct"></span></div>
+                        <div>🔑 Token valid until <span id="token-exp"></span></div>
+                    </div>
+                    <button id="logout" is="emby-button" type="button" class="raised button-cancel block emby-button"><span>Log out</span></button>
+                </div>
+
+                <div id="JioTvMsg"></div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+        (function () {
+            var g = function (id) { return document.querySelector('#JioTvConfigPage #' + id); };
+
+            function fetchJson(path, type, body) {
+                var opts = { url: window.ApiClient.getUrl(path), type: type, dataType: 'json' };
+                if (body !== undefined) {
+                    opts.data = body;
+                    opts.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+                }
+                return window.ApiClient.fetch(opts);
+            }
+
+            function post(path, data) { return fetchJson(path, 'POST', new URLSearchParams(data).toString()); }
+
+            document.querySelector('#JioTvConfigPage').addEventListener('pageshow', function () {
+                var mobileInput = g('mobile'), otpInput = g('otp');
+                var sendBtn = g('send-otp'), verifyBtn = g('verify-otp'), logoutBtn = g('logout');
+                var msg = g('JioTvMsg'), loginUi = g('login-ui'), statusUi = g('status-ui'), otpUi = g('otp-ui');
+                var storedMobile = null;
+
+                function say(t) { msg.textContent = t; }
+
+                function showStatus(st, note) {
+                    loginUi.classList.add('jiotv-hidden');
+                    statusUi.classList.remove('jiotv-hidden');
+                    var shown = st.name ? ('mobile ending ' + st.name.slice(-4)) : 'logged in';
+                    g('acct').textContent = shown;
+                    g('token-exp').textContent = st.expiry;
+                    say(note);
+                }
+
+                fetchJson('/JioTv/Auth/Status', 'GET').then(function (st) {
+                    if (st && st.loggedIn) { showStatus(st, ''); }
+                }).catch(function () { /* stays on login UI */ });
+
+                if (sendBtn.getAttribute('data-wired') === '1') return;
+                sendBtn.setAttribute('data-wired', '1');
+
+                sendBtn.addEventListener('click', function () {
+                    var m = mobileInput.value.trim();
+                    if (!/^\d{10}$/.test(m)) { say('❌ enter a 10-digit Jio mobile number'); return; }
+                    sendBtn.disabled = true; say('sending OTP…');
+                    post('/JioTv/Auth/SendOtp', { mobileNumber: m }).then(function (r) {
+                        sendBtn.disabled = false;
+                        if (r && r.status === 'success') {
+                            storedMobile = m;
+                            otpUi.classList.remove('jiotv-hidden');
+                            say('✅ OTP sent; check SMS');
+                        } else { say('❌ ' + ((r && r.message) || 'send failed')); }
+                    }).catch(function (e) { say('❌ ' + e); });
+                });
+
+                verifyBtn.addEventListener('click', function () {
+                    verifyBtn.disabled = true; say('verifying…');
+                    post('/JioTv/Auth/VerifyOtp', { mobileNumber: storedMobile, otp: otpInput.value.trim() }).then(function (r) {
+                        verifyBtn.disabled = false;
+                        if (r && r.status === 'success') {
+                            fetchJson('/JioTv/Auth/Status', 'GET').then(function (st) {
+                                if (st && st.loggedIn) { showStatus(st, '✅ logged in'); }
+                            });
+                        } else { say('❌ ' + ((r && r.message) || 'invalid OTP')); }
+                    }).catch(function (e) { say('❌ ' + e); });
+                });
+
+                logoutBtn.addEventListener('click', function () {
+                    post('/JioTv/Auth/Logout', {}).then(function () {
+                        statusUi.classList.add('jiotv-hidden');
+                        loginUi.classList.remove('jiotv-hidden');
+                        say('logged out');
+                    });
+                });
+            });
+        })();
+        </script>
     </div>
-  </div>
-
-  <div id="status-ui" class="hidden">
-    <div class="meta">
-      <div>👤 <span id="acct"></span></div>
-      <div>🔑 Token valid until <span id="token-exp"></span></div>
-    </div>
-    <button id="logout" class="secondary">Log out</button>
-  </div>
-
-  <div id="msg"></div>
-</div>
-</div>
-
-<script>
-(function () {
-  var mobileInput = document.getElementById('mobile');
-  var otpInput = document.getElementById('otp');
-  var sendBtn = document.getElementById('send-otp');
-  var verifyBtn = document.getElementById('verify-otp');
-  var logoutBtn = document.getElementById('logout');
-  var msg = document.getElementById('msg');
-  var loginUi = document.getElementById('login-ui');
-  var statusUi = document.getElementById('status-ui');
-  var otpUi = document.getElementById('otp-ui');
-  var storedMobile = null;
-
-  function say(t) { msg.textContent = t; }
-
-  function fetchJson(path, type, body) {
-    var opts = { url: window.ApiClient.getUrl(path), type: type, dataType: 'json' };
-    if (body !== undefined) {
-      opts.data = body;
-      opts.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-    }
-    return window.ApiClient.fetch(opts);
-  }
-
-  function post(path, data) { return fetchJson(path, 'POST', new URLSearchParams(data).toString()); }
-
-  function showStatus(st, note) {
-    loginUi.classList.add('hidden');
-    statusUi.classList.remove('hidden');
-    var shown = st.name ? ('mobile ending ' + st.name.slice(-4)) : 'logged in';
-    document.getElementById('acct').textContent = shown;
-    document.getElementById('token-exp').textContent = st.expiry;
-    say(note);
-  }
-
-  fetchJson('/JioTv/Auth/Status', 'GET').then(function (st) {
-    if (st && st.loggedIn) { showStatus(st, ''); }
-  }).catch(function () { /* stays on login UI */ });
-
-  sendBtn.addEventListener('click', function () {
-    var m = mobileInput.value.trim();
-    if (!/^\d{10}$/.test(m)) { say('❌ enter a 10-digit Jio mobile number'); return; }
-    sendBtn.disabled = true; say('sending OTP…');
-    post('/JioTv/Auth/SendOtp', { mobileNumber: m }).then(function (r) {
-      sendBtn.disabled = false;
-      if (r && r.status === 'success') {
-        storedMobile = m;
-        otpUi.classList.remove('hidden');
-        say('✅ OTP sent; check SMS');
-      } else { say('❌ ' + ((r && r.message) || 'send failed')); }
-    }).catch(function (e) { say('❌ ' + e); });
-  });
-
-  verifyBtn.addEventListener('click', function () {
-    verifyBtn.disabled = true; say('verifying…');
-    post('/JioTv/Auth/VerifyOtp', { mobileNumber: storedMobile, otp: otpInput.value.trim() }).then(function (r) {
-      verifyBtn.disabled = false;
-      if (r && r.status === 'success') {
-        fetchJson('/JioTv/Auth/Status', 'GET').then(function (st) {
-          if (st && st.loggedIn) { showStatus(st, '✅ logged in'); }
-        });
-      } else { say('❌ ' + ((r && r.message) || 'invalid OTP')); }
-    }).catch(function (e) { say('❌ ' + e); });
-  });
-
-  logoutBtn.addEventListener('click', function () {
-    post('/JioTv/Auth/Logout', {}).then(function () {
-      statusUi.classList.add('hidden');
-      loginUi.classList.remove('hidden');
-      say('logged out');
-    });
-  });
-})();
-</script>
 </body>
 </html>
