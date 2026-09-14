@@ -1,0 +1,32 @@
+---
+name: build-and-release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build
+        run: dotnet build JioTv.Plugin/JioTv.Plugin.csproj -c Release
+      - name: Test
+        run: dotnet test JioTv.Tests/JioTv.Tests.csproj --verbosity normal
+      - name: Package
+        run: ./build.sh "${{ github.ref_name }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jiotv-plugin
+          path: artifacts/
+      - name: Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip

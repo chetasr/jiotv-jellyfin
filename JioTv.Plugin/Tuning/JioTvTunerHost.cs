@@ -25,15 +25,18 @@ namespace JioTv.Plugin.Tuning;
 /// </summary>
 public class JioTvTunerHost : ITunerHost
 {
+    private readonly JioTv.Plugin.Epg.ListingProviderAutoSeed _autoListing;
+
     private const string TunerId = "jiotv-tuner-1";
 
     private readonly IJioChannels _channelSource;
     private readonly IJioStreams _streamSource;
 
-    public JioTvTunerHost(IJioChannels channelSource, IJioStreams streamSource)
+    public JioTvTunerHost(IJioChannels channelSource, IJioStreams streamSource, JioTv.Plugin.Epg.ListingProviderAutoSeed autoListing)
     {
         _channelSource = channelSource;
         _streamSource = streamSource;
+        _autoListing = autoListing;
     }
 
     public string Name => "JioTV";
@@ -44,6 +47,7 @@ public class JioTvTunerHost : ITunerHost
     public async Task<List<ChannelInfo>> GetChannels(bool enableCache, CancellationToken cancellationToken)
     {
         var channels = await _channelSource.GetChannelsAsync(cancellationToken).ConfigureAwait(false);
+        _autoListing.TrySeedListingProvider();
         return JioTvChannelMapper.Map(channels, TunerId).ToList();
     }
 

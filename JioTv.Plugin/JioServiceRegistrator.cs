@@ -41,7 +41,15 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
             return new CredentialStore(
                 System.IO.Path.Combine(appPaths.PluginConfigurationsPath, "JioTv"));
         });
+        serviceCollection.AddSingleton(sp =>
+        {
+            var appPaths = sp.GetRequiredService<IApplicationPaths>();
+            return new CredentialStore(
+                System.IO.Path.Combine(appPaths.PluginConfigurationsPath, "JioTv"));
+        });
         serviceCollection.AddSingleton<JioAuth>();
+        serviceCollection.AddSingleton<JioTv.Plugin.Epg.ListingProviderAutoSeed>();
+
 
         // Request-time client bound to credentials snapshot at construction;
         // the stream/channel sources reload credentials per call in v2.
@@ -57,11 +65,26 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
             "/JioTv"));
 
         serviceCollection.AddSingleton<HlsProxyRenderer>();
+
+        serviceCollection.AddSingleton<JioTv.Plugin.Epg.JioEpgGenerator>(sp => new JioTv.Plugin.Epg.JioEpgGenerator(
+            url =>
+            {
+                var client = sp.GetRequiredService<JioTvClient>();
+                var response = JioHttp.HttpClient.GetAsync(url).GetAwaiter().GetResult();
+                var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                return System.Threading.Tasks.Task.FromResult(((int)response.StatusCode, body));
+            },
+            () => sp.GetRequiredService<JioTvClient>().GetChannelsAsync().ConfigureAwait(false).GetAwaiter().GetResult()));
+        serviceCollection.AddSingleton<MediaBrowser.Controller.LiveTv.IListingsProvider, JioTv.Plugin.Epg.JioTvListingProvider>();
         serviceCollection.AddTransient<JioTvProxyController>();
         serviceCollection.AddTransient<Configuration.JioTvAuthController>();
 
         serviceCollection.AddSingleton<IJioChannels, JioTvChannelSource>();
         serviceCollection.AddSingleton<IJioStreams, JioTvStreamSource>();
+
+        // Listings provider (EPG). Registered with Jellyfin's ListingsManager
+        // via DI; the tuner's channels auto-match by type "jiotv".
+
 
         // Tuner host discovery in Jellyfin 12 is DI-driven (TunerHostManager
         // takes IEnumerable<ITunerHost>) — explicit registration required.
