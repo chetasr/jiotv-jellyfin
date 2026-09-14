@@ -68,6 +68,13 @@ public sealed class JioTvStreamSource : IJioStreams
             Path = authPath,
             Protocol = MediaBrowser.Model.MediaInfo.MediaProtocol.Http,
             Container = "hls",
+            // Port of M3U tuner's CreateMediaSourceInfo pattern: Jellyfin's
+            // standard playback flow expects RequiresOpening so it routes
+            // through ILiveStream.Open (our tuner's GetChannelStream) and
+            // assigns an OpenToken — the same lifecycle m3u/HDHomeRun use.
+            RequiresOpening = true,
+            RequiresClosing = true,
+            IsInfiniteStream = true,
             SupportsDirectPlay = true,
             SupportsDirectStream = true,
             SupportsTranscoding = false,
