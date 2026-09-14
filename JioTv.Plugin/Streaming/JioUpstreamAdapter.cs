@@ -108,6 +108,7 @@ public sealed class JioProxyFetcher : IJioProxyFetcher
         var headers = BuildHeaders(creds, channelId, isKey);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Version = new Version(1, 1); // Match Go's fasthttp: HTTP/1.1 only
         _ = ApplyHeaders(request, headers, cookie ?? string.Empty, isKey);
 
         using var response = await JioHttp.HttpClient.SendAsync(request).ConfigureAwait(false);
