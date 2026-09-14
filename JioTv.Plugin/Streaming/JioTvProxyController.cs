@@ -86,14 +86,12 @@ public sealed class JioTvProxyController : ControllerBase
             token = cachedToken!;
         }
 
-        System.Console.WriteLine("### JIO-SEG-URL: " + upstreamUrl);
-        System.Console.WriteLine("### JIO-SEG-TOKEN: " + (token ?? "null"));
-        var isKey = upstreamUrl.EndsWith(".pkey", StringComparison.OrdinalIgnoreCase) || upstreamUrl.EndsWith(".key", StringComparison.OrdinalIgnoreCase);
+        var upstreamPath = upstreamUrl.Split('?', 2)[0];
+        var isKey = upstreamPath.EndsWith(".pkey", StringComparison.OrdinalIgnoreCase) || upstreamPath.EndsWith(".key", StringComparison.OrdinalIgnoreCase);
         var cookie = isKey
             ? CookieHelpers.BuildKeyCookies(upstreamUrl)
             : (string.IsNullOrEmpty(token) ? null : "__hdnea__=" + token);
         var (status, body, newHdnea) = await _fetcher.FetchAsync(upstreamUrl, channelId ?? string.Empty, cookie ?? string.Empty, isKey).ConfigureAwait(false);
-        System.Console.WriteLine("### JIO-SEG: status=" + status + " bytes=" + body.Length);
         if (!string.IsNullOrEmpty(newHdnea))
         {
             _cache.Set(key, newHdnea);
