@@ -13,7 +13,7 @@ VERSION=${1:-$(date +%Y.%m.%d.1)}
 
 (
   cd "$ROOT_DIR"
-  dotnet build JioTv.Plugin/JioTv.Plugin.csproj -c Release /p:Version="${VERSION#v}"
+  dotnet build JioTv.Plugin/JioTv.Plugin.csproj -c Release -p:Version=${VERSION#v} -p:AssemblyVersion=${VERSION#v}.0 -p:FileVersion=${VERSION#v}.0
 )
 
 echo "Artifacts built at JioTv.Plugin/bin/Release/net9.0/"

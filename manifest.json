@@ -9,6 +9,16 @@
         "imageUrl": "https://raw.githubusercontent.com/chetasr/jiotv-jellyfin/main/assets/logo.png",
         "versions": [
             {
+                "version": "0.2.0",
+                "changelog": "Auto-refresh tokens, self-healing proxy, AES-secured auth URLs, EPG via Jio.",
+                "targetAbi": "10.11.5.0",
+                "sourceUrl": "https://github.com/chetasr/jiotv-jellyfin/releases/download/v0.2.0/JioTv.Plugin.0.2.0.zip",
+                "checksum": "501420b1062be20bc13bc9de3276d8c6",
+                "timestamp": "2026-09-15T05:30:10Z",
+                "repositoryName": "JioTV",
+                "repositoryUrl": "https://github.com/chetasr/jiotv-jellyfin"
+            },
+            {
                 "version": "0.1.9",
                 "changelog": "Auto-refresh tokens, self-healing proxy, AES-secured auth URLs, EPG via Jio.",
                 "targetAbi": "10.11.5.0",
