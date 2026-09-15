@@ -73,7 +73,17 @@ public sealed class JioServiceRegistrator : IPluginServiceRegistrator
                 return System.Threading.Tasks.Task.FromResult(((int)response.StatusCode, body));
             },
             () => sp.GetRequiredService<JioTvClient>().GetChannelsAsync().ConfigureAwait(false).GetAwaiter().GetResult()));
-        serviceCollection.AddSingleton<MediaBrowser.Controller.LiveTv.IListingsProvider, JioTv.Plugin.Epg.JioTvListingProvider>();
+        serviceCollection.AddSingleton<MediaBrowser.Controller.LiveTv.IListingsProvider>(sp =>
+            new JioTv.Plugin.Epg.JioTvListingProvider(
+                sp.GetRequiredService<JioTvClient>(),
+                async url =>
+                {
+                    using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, url);
+                    request.Headers.TryAddWithoutValidation("User-Agent", JioConstants.UserAgentOkHttp);
+                    using var response = await JioHttp.HttpClient.SendAsync(request).ConfigureAwait(false);
+                    var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    return ((int)response.StatusCode, body);
+                }));
         serviceCollection.AddTransient<JioTvProxyController>();
         serviceCollection.AddTransient<Configuration.JioTvAuthController>();
 
