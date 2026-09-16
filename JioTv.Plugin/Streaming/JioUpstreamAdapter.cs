@@ -69,6 +69,13 @@ public sealed class JioProxyFetcher : IJioProxyFetcher
         return headers;
     }
 
+    /// <summary>SonyLIV CDN (slivcdn / dai.google.com) host headers: the sony
+    /// auth path expects the jiocinema origin + the ExoPlayer user-agent, and
+    /// ignores the Jio app-key headers with 403 otherwise.</summary>
+    private static bool IsSony(string upstreamUrl) => upstreamUrl.Contains("slivcdn", StringComparison.OrdinalIgnoreCase)
+        || upstreamUrl.Contains("dai.google.com", StringComparison.OrdinalIgnoreCase)
+        || upstreamUrl.StartsWith("sony", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Mimics Go's SetPlayerHeaders: strips browser style headers.</summary>
     private static HttpRequestMessage ApplyHeaders(HttpRequestMessage request, Dictionary<string, string> headers, string? cookie, bool isKey)
     {
@@ -110,6 +117,18 @@ public sealed class JioProxyFetcher : IJioProxyFetcher
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Version = new Version(1, 1); // Match Go's fasthttp: HTTP/1.1 only
         _ = ApplyHeaders(request, headers, cookie ?? string.Empty, isKey);
+        if (IsSony(url))
+        {
+            // Sony CDN path: drop the Jio app-key identity headers and use the
+            // jiocinema-origin ExoPlayer identity like Go's SLHandler does.
+            foreach (var k in new[] { "appkey", "usergroup", "versionCode", "lbcookie", "deviceId" })
+            {
+                request.Headers.Remove(k);
+            }
+
+            request.Headers.TryAddWithoutValidation("Origin", "https://www.jiocinema.com");
+            request.Headers.TryAddWithoutValidation("Referer", "https://www.jiocinema.com/");
+        }
 
         using var response = await JioHttp.HttpClient.SendAsync(request).ConfigureAwait(false);
         var data = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);

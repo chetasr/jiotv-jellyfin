@@ -40,7 +40,9 @@ public sealed class JioTvChannelSource : IJioChannels
             // No credentials stored: channel listing works without them, and a
             // failed auth check must not break tuner enumeration or the guide.
         }
-        return await _client.GetChannelsAsync().ConfigureAwait(false);
+        var list = await _client.GetChannelsAsync().ConfigureAwait(false);
+        list.AddRange(SonyChannels.ToJioChannelList());
+        return list;
     }
 }
 
@@ -68,11 +70,21 @@ public sealed class JioTvStreamSource : IJioStreams
     public async Task<MediaBrowser.Model.Dto.MediaSourceInfo> OpenLiveStreamAsync(string channelId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var live = await _client.LiveAsync(channelId).ConfigureAwait(false);
-        var upstreamUrl = JioTvClient.SelectQuality("auto", live.Bitrates.Auto, live.Bitrates.High, live.Bitrates.Medium, live.Bitrates.Low);
-        if (string.IsNullOrEmpty(upstreamUrl))
+        string upstreamUrl;
+        if (SonyChannels.IsSony(channelId))
         {
-            upstreamUrl = live.Result;
+            // SonyLIV channels resolve through the Google DAI redirect chain,
+            // not our Jio playback API (port of JioTV Go's getSLChannel).
+            upstreamUrl = await SonyChannels.ResolveSonyLiveUrlAsync(channelId, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var live = await _client.LiveAsync(channelId).ConfigureAwait(false);
+            upstreamUrl = JioTvClient.SelectQuality("auto", live.Bitrates.Auto, live.Bitrates.High, live.Bitrates.Medium, live.Bitrates.Low);
+            if (string.IsNullOrEmpty(upstreamUrl))
+            {
+                upstreamUrl = live.Result;
+            }
         }
 
         var authPath = _rewriter.CreateEncryptedProxyPath(
@@ -93,9 +105,12 @@ public sealed class JioTvStreamSource : IJioStreams
             RequiresOpening = true,
             RequiresClosing = true,
             IsInfiniteStream = true,
+            BufferMs = 3000,
             SupportsDirectPlay = true,
             SupportsDirectStream = true,
-            SupportsTranscoding = false,
+            // Allow Jellyfin's ffmpeg remux for clients without HLS direct-play
+            // (UHF, third-party apps, etc.); direct-play stays the preference.
+            SupportsTranscoding = true,
             // HLS proxy: Jellyfin's ffprobe of our own URL can be unreachable
             // inside containers (mapped-port mismatch) and adds nothing for
             // our self-describing manifest — skip probing entirely.

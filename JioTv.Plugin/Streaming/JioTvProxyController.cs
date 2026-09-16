@@ -61,6 +61,8 @@ public sealed class JioTvProxyController : ControllerBase
         var outcome = await _renderer.RenderManifestAsync(channelId ?? string.Empty, upstreamUrl, quality ?? "auto").ConfigureAwait(false);
 
         Response.Headers["Cache-Control"] = "no-store, must-revalidate, max-age=3";
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
+        Response.Headers["Access-Control-Allow-Headers"] = "Range";
         return StatusCodeWithBody(outcome.StatusCode, outcome.Body, "application/vnd.apple.mpegurl");
     }
 
@@ -98,6 +100,9 @@ public sealed class JioTvProxyController : ControllerBase
         }
 
         Response.Headers["Cache-Control"] = "no-store, must-revalidate";
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
+        Response.Headers["Access-Control-Allow-Headers"] = "Range";
+        Response.Headers["Accept-Ranges"] = "bytes";
         return StatusCodeWithBytes(status, body, upstreamUrl.EndsWith(".ts", StringComparison.Ordinal) ? "video/mp2t" : "application/octet-stream");
     }
 
