@@ -129,9 +129,13 @@ public sealed class JioTvStreamSource : IJioStreams
         Type = MediaBrowser.Model.Entities.MediaStreamType.Video,
         Codec = "h264",
         Index = -1,
-        IsInterlaced = true,
+        // Jio's live HLS is progressive H.264. Declaring it interlaced makes
+        // Jellyfin's ffmpeg enable bwdif deinterlacing during remux, which
+        // delays video frames and shows up as accumulating audio drift.
+        IsInterlaced = false,
+        Profile = "High",
         RealFrameRate = 25,
-        BitRate = 2_000_000,
+        BitRate = 2_500_000,
     };
 
     private static MediaBrowser.Model.Entities.MediaStream AudioStream() => new()
