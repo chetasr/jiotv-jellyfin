@@ -99,6 +99,27 @@ public sealed class JioTvProxyController : ControllerBase
             _cache.Set(key, newHdnea);
         }
 
+        // ---- recovery path (401/403/404) ----
+        // Akamai __hdnea__ tokens expire fast (~90-120s). Segments arrive after
+        // the manifest that minted them has long since rotated tokens; without
+        // recovery the player receives the 403 body as garbage data and stops
+        // after a while ("reopen the channel" symptom). Mirrors the manifest
+        // route's recovery: re-run LiveAsync for a fresh token once, then retry
+        // the same segment.
+        if ((int)status is 401 or 403 or 404 && !string.IsNullOrWhiteSpace(channelId))
+        {
+            await _renderer.RenderManifestAsync(channelId, upstreamUrl, quality ?? "auto").ConfigureAwait(false);
+            if (_cache.TryGet(key, out var freshToken) && !string.IsNullOrEmpty(freshToken))
+            {
+                cookie = isKey ? CookieHelpers.BuildKeyCookies(upstreamUrl) : "__hdnea__=" + freshToken;
+                (status, body, newHdnea) = await _fetcher.FetchAsync(upstreamUrl, channelId, cookie, isKey).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(newHdnea))
+                {
+                    _cache.Set(key, newHdnea);
+                }
+            }
+        }
+
         Response.Headers["Cache-Control"] = "no-store, must-revalidate";
         Response.Headers["Access-Control-Allow-Origin"] = "*";
         Response.Headers["Access-Control-Allow-Headers"] = "Range";
